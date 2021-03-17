@@ -10,7 +10,7 @@ public class Locacao {
 	private List<Filme> filmes = Arrays.asList();
 	private Date dataLocacao;
 	private Date dataRetorno;
-	private Double valor;
+	private Double valorTotal;
 	
 	public Usuario getUsuario() {
 		return usuario;
@@ -36,12 +36,12 @@ public class Locacao {
 		this.dataRetorno = dataRetorno;
 	}
 	
-	public Double getValor() {
-		return valor;
+	public Double getValorTotal() {
+		return valorTotal;
 	}
 	
-	public void setValor(Double valor) {
-		this.valor = valor;
+	public void setValorTotal(Double valor) {
+		this.valorTotal = valor;
 	}
 	
 	public List<Filme> getFilmes() {
@@ -52,7 +52,7 @@ public class Locacao {
 		this.filmes = filmes;
 	}
 
-	public Double getValorTotal() {
+	public Double getSubTotal() {
 		double total = 0;
 		
 		for (Filme filme :this.filmes) {
