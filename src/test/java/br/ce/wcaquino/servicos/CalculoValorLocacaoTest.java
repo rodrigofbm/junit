@@ -14,7 +14,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
+import org.mockito.Mockito;
 
+import br.ce.wcaquino.daos.LocacaoDAO;
 import br.ce.wcaquino.entidades.Filme;
 import br.ce.wcaquino.entidades.Locacao;
 import br.ce.wcaquino.entidades.Usuario;
@@ -24,6 +26,9 @@ import br.ce.wcaquino.exceptions.LocadoraException;
 @RunWith(Parameterized.class)
 public class CalculoValorLocacaoTest {
 	private LocacaoService locacaoService;
+	private SPCService spcService;
+	private LocacaoDAO dao;
+	private EmailService emailService;
 	
 	@Parameter
 	public List<Filme> filmes;
@@ -35,6 +40,12 @@ public class CalculoValorLocacaoTest {
 	@Before
 	public void setup() {
 		locacaoService = new LocacaoService();
+		dao = Mockito.mock(LocacaoDAO.class);
+		spcService = Mockito.mock(SPCService.class);
+		emailService = Mockito.mock(EmailService.class);
+		locacaoService.daoSetup(dao);
+		locacaoService.spcServiceSetup(spcService);
+		locacaoService.emailServiceSetup(emailService);
 	}
 	
 	// Essa coleção será usada por cada método de teste dessa classe

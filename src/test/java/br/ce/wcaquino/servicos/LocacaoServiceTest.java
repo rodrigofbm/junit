@@ -2,6 +2,7 @@ package br.ce.wcaquino.servicos;
 
 import static br.ce.wcaquino.builders.FilmeBuilder.umFilme;
 import static br.ce.wcaquino.builders.FilmeBuilder.umFilmeSemEstoque;
+import static br.ce.wcaquino.builders.LocacaoBuilder.umLocacao;
 import static br.ce.wcaquino.builders.UsuarioBuilder.umUsuario;
 import static br.ce.wcaquino.matchers.CustomMatchers.caiEm;
 import static br.ce.wcaquino.utils.DataUtils.adicionarDias;
@@ -9,6 +10,10 @@ import static br.ce.wcaquino.utils.DataUtils.isMesmaData;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Calendar;
@@ -21,7 +26,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
+import br.ce.wcaquino.daos.LocacaoDAO;
 import br.ce.wcaquino.entidades.Filme;
 import br.ce.wcaquino.entidades.Locacao;
 import br.ce.wcaquino.entidades.Usuario;
@@ -32,6 +39,9 @@ import buildermaster.BuilderMaster;
 
 public class LocacaoServiceTest {
 	private LocacaoService locacaoService;
+	private SPCService spcService;
+	private LocacaoDAO dao;
+	private EmailService emailService;
 	// o Junit nÃ£o reinicializa variÃ¡vel estÃ¡tica a cada teste
 	// private static int count = 0;
 	
@@ -44,6 +54,12 @@ public class LocacaoServiceTest {
 	@Before
 	public void setup() {
 		locacaoService = new LocacaoService();
+		dao = Mockito.mock(LocacaoDAO.class);
+		spcService = Mockito.mock(SPCService.class);
+		emailService = Mockito.mock(EmailService.class);
+		locacaoService.daoSetup(dao);
+		locacaoService.spcServiceSetup(spcService);
+		locacaoService.emailServiceSetup(emailService);
 		// count++;
 		// System.out.println(count);
 	}
@@ -146,6 +162,55 @@ public class LocacaoServiceTest {
 		// assertTrue(ehSegunda);
 		assertThat(locacao.getDataRetorno(), caiEm(Calendar.MONDAY));
 		//assertThat(locacao.getDataRetorno(), CustomMatchers.caiNumaSegunda());
+	}
+	
+	@Test
+	public void naoDeveAlugarFilmeParaNegativado() throws FilmeSemEstoqueExceptions {
+		// cenário
+		Usuario usuario = umUsuario().agora();
+		//Usuario usuario2 = umUsuario().comNome("Marquito").agora();
+		List<Filme> filmes = Arrays.asList(new Filme("Filme 1", 6, 12.99));
+		
+		Mockito.when(spcService.isNevativado(Mockito.any(Usuario.class))).thenReturn(true);
+		
+		// ação
+		try {
+			locacaoService.alugarFilme(usuario, filmes);
+			// locacaoService.alugarFilme(usuario2, filmes); gera falha
+		
+		// verificação
+			fail("Deveria lançar uma exceção");
+		}  catch (LocadoraException e) {
+			assertThat(e.getMessage(), is("Usuário negativado no SPC"));
+		}
+		
+		verify(spcService).isNevativado(usuario);
+	}
+	
+	@Test
+	public void deveEnviarEmailParaLocacoesAtrasadas() {
+		// cenário
+		Usuario usuario = umUsuario().agora();
+		Usuario usuario2 = umUsuario().comNome("Usuário em dia").agora();
+		Usuario usuario3 = umUsuario().comNome("Outro atrasado").agora();
+		//Usuario usuario2 = umUsuario().comNome("Usuario 2").agora();
+		List<Locacao> pendentes = Arrays.asList(
+				umLocacao().comUsuario(usuario).comAtraso().agora(),
+				umLocacao().comUsuario(usuario2).agora(),
+				umLocacao().comUsuario(usuario3).comAtraso().agora(),
+				umLocacao().comUsuario(usuario3).comAtraso().agora());
+		when(dao.obterLocacoesPendentes()).thenReturn(pendentes);
+		
+		// ação
+		this.locacaoService.notificarAtrasos();
+		
+		// verificação
+		verify(emailService).notificarAtraso(usuario);
+		verify(emailService, Mockito.times(2)).notificarAtraso(usuario3); // comentando essa linha irá falhar pois esse cenário ocorreu por conta
+		// do array List<Locacao> pendentes ter o usuario3 no nosso teste
+		verify(emailService, Mockito.never()).notificarAtraso(usuario2);
+		verifyNoMoreInteractions(emailService); // passa se nenhum outro e-mail além do usuario e usuario3 foi enviado
+		//verifyZeroInteractions(spcService);
 	}
 	
 	public static void main(String[] args) {
