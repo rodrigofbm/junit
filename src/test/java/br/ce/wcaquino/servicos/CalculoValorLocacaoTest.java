@@ -14,7 +14,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import br.ce.wcaquino.daos.LocacaoDAO;
 import br.ce.wcaquino.entidades.Filme;
@@ -25,9 +27,13 @@ import br.ce.wcaquino.exceptions.LocadoraException;
 
 @RunWith(Parameterized.class)
 public class CalculoValorLocacaoTest {
+	@InjectMocks
 	private LocacaoService locacaoService;
+	@Mock
 	private SPCService spcService;
+	@Mock
 	private LocacaoDAO dao;
+	@Mock
 	private EmailService emailService;
 	
 	@Parameter
@@ -39,13 +45,14 @@ public class CalculoValorLocacaoTest {
 	
 	@Before
 	public void setup() {
-		locacaoService = new LocacaoService();
-		dao = Mockito.mock(LocacaoDAO.class);
-		spcService = Mockito.mock(SPCService.class);
-		emailService = Mockito.mock(EmailService.class);
-		locacaoService.daoSetup(dao);
-		locacaoService.spcServiceSetup(spcService);
-		locacaoService.emailServiceSetup(emailService);
+		MockitoAnnotations.initMocks(this);
+		/*
+		 * locacaoService = new LocacaoService(); dao = Mockito.mock(LocacaoDAO.class);
+		 * spcService = Mockito.mock(SPCService.class); emailService =
+		 * Mockito.mock(EmailService.class); locacaoService.daoSetup(dao);
+		 * locacaoService.spcServiceSetup(spcService);
+		 * locacaoService.emailServiceSetup(emailService);
+		 */
 	}
 	
 	// Essa coleção será usada por cada método de teste dessa classe

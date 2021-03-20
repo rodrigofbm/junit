@@ -1,6 +1,7 @@
 package br.ce.wcaquino.servicos;
 
 import static br.ce.wcaquino.utils.DataUtils.adicionarDias;
+import static br.ce.wcaquino.utils.DataUtils.obterDataComDiferencaDias;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -33,9 +34,26 @@ public class LocacaoService {
 			throw new LocadoraException("Usu√°rio inv√°lido");
 		}
 		
-		if(spc.isNevativado(usuario)) {
+		boolean isNegativado;
+		
+		try {
+			isNegativado = spc.isNevativado(usuario);
+			
+			/*
+			 * if(spc.isNevativado(usuario)) { throw new
+			 * LocadoraException("Usu·rio negativado no SPC"); }
+			 * 
+			 * dessa forma, ao se lanÁar o LocadoraException, o catch logo abaixo ser· chamado
+			 * enviando na verdade a outra mensagem
+			 */
+		} catch (Exception e) {
+			throw new LocadoraException("Problemas com o SPC, tente novamente mais tarde.");
+		}
+		
+		if(isNegativado) {
 			throw new LocadoraException("Usu·rio negativado no SPC");
 		}
+		
 		
 		Locacao locacao = new Locacao();
 		
@@ -88,17 +106,25 @@ public class LocacaoService {
 		}
 	}
 	
-	public void daoSetup(LocacaoDAO dao) {
-		this.dao = dao;
+	public void prorrogarLocacao(Locacao locacao, int dias) {
+		Locacao novaLocacao = new Locacao();
+		novaLocacao.setDataLocacao(new Date());
+		novaLocacao.setDataRetorno(obterDataComDiferencaDias(dias));
+		novaLocacao.setFilmes(locacao.getFilmes());
+		novaLocacao.setUsuario(locacao.getUsuario());
+		novaLocacao.setValorTotal(locacao.getValorTotal() * dias);
+		
+		dao.salvar(novaLocacao);
 	}
 	
-	public void spcServiceSetup(SPCService service) {
-		this.spc = service;
-	}
-	
-	public void emailServiceSetup(EmailService emailService) {
-		this.emailService =emailService;
-	}
+	/*
+	 * public void daoSetup(LocacaoDAO dao) { this.dao = dao; }
+	 * 
+	 * public void spcServiceSetup(SPCService service) { this.spc = service; }
+	 * 
+	 * public void emailServiceSetup(EmailService emailService) { this.emailService
+	 * =emailService; }
+	 */
 }
 
 

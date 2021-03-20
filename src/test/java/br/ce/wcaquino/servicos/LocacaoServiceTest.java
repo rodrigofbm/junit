@@ -12,7 +12,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
@@ -26,7 +25,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
 import org.junit.rules.ExpectedException;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import br.ce.wcaquino.daos.LocacaoDAO;
 import br.ce.wcaquino.entidades.Filme;
@@ -38,9 +41,13 @@ import br.ce.wcaquino.utils.DataUtils;
 import buildermaster.BuilderMaster;
 
 public class LocacaoServiceTest {
+	@InjectMocks
 	private LocacaoService locacaoService;
+	@Mock
 	private SPCService spcService;
+	@Mock
 	private LocacaoDAO dao;
+	@Mock
 	private EmailService emailService;
 	// o Junit nÃ£o reinicializa variÃ¡vel estÃ¡tica a cada teste
 	// private static int count = 0;
@@ -53,13 +60,14 @@ public class LocacaoServiceTest {
 	
 	@Before
 	public void setup() {
-		locacaoService = new LocacaoService();
-		dao = Mockito.mock(LocacaoDAO.class);
-		spcService = Mockito.mock(SPCService.class);
-		emailService = Mockito.mock(EmailService.class);
-		locacaoService.daoSetup(dao);
-		locacaoService.spcServiceSetup(spcService);
-		locacaoService.emailServiceSetup(emailService);
+		MockitoAnnotations.initMocks(this);
+		/*
+		 * locacaoService = new LocacaoService(); dao = Mockito.mock(LocacaoDAO.class);
+		 * spcService = Mockito.mock(SPCService.class); emailService =
+		 * Mockito.mock(EmailService.class); locacaoService.daoSetup(dao);
+		 * locacaoService.spcServiceSetup(spcService);
+		 * locacaoService.emailServiceSetup(emailService);
+		 */
 		// count++;
 		// System.out.println(count);
 	}
@@ -165,7 +173,7 @@ public class LocacaoServiceTest {
 	}
 	
 	@Test
-	public void naoDeveAlugarFilmeParaNegativado() throws FilmeSemEstoqueExceptions {
+	public void naoDeveAlugarFilmeParaNegativado() throws Exception {
 		// cenário
 		Usuario usuario = umUsuario().agora();
 		//Usuario usuario2 = umUsuario().comNome("Marquito").agora();
@@ -211,6 +219,41 @@ public class LocacaoServiceTest {
 		verify(emailService, Mockito.never()).notificarAtraso(usuario2);
 		verifyNoMoreInteractions(emailService); // passa se nenhum outro e-mail além do usuario e usuario3 foi enviado
 		//verifyZeroInteractions(spcService);
+	}
+	
+	@Test
+	public void deveTratarErroDoSPC() throws Exception  {
+		// cenário
+		Usuario usuario = umUsuario().agora();
+		List<Filme> filmes = Arrays.asList(umFilme().agora());
+		
+		when(spcService.isNevativado(usuario)).thenThrow(new Exception("Falha catastrófica."));
+		
+		// verificação
+		exception.expect(LocadoraException.class);
+		exception.expectMessage("Problemas com o SPC, tente novamente mais tarde.");
+		
+		// ação
+		locacaoService.alugarFilme(usuario, filmes);
+				
+	}
+	
+	@Test
+	public void deveProrrogarUmaLocacao() {
+		// cenário
+		Locacao locacao = umLocacao().agora();
+		int dias = 3;
+		// ação
+		locacaoService.prorrogarLocacao(locacao, dias);
+		
+		// verificação
+		ArgumentCaptor<Locacao> argCapt = ArgumentCaptor.forClass(Locacao.class);
+		verify(dao).salvar(argCapt.capture());
+		Locacao locacaoProrrogada = argCapt.getValue();
+		
+		error.checkThat(locacaoProrrogada.getValorTotal(), is(4.0*dias));
+		error.checkThat(isMesmaData(locacaoProrrogada.getDataRetorno(), adicionarDias(new Date(), dias)), is(true));
+		error.checkThat(isMesmaData(locacaoProrrogada.getDataLocacao(), new Date()), is(true));
 	}
 	
 	public static void main(String[] args) {
